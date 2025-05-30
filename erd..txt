@@ -1,0 +1,46 @@
+tbl_admin
+username
+password
+
+tbl_users
+username
+password
+email
+first_name
+last_name
+created_at
+picture
+is_verified
+
+tbl_tutor
+username
+password
+email
+first_name
+last_name
+created_at
+picture
+is_verified
+
+tbl_subject
+subject_name
+
+tbl_tutor_availability_subjects
+available_date
+subject_id -> foreign to tbl_subject -> id
+start_time
+end_time
+
+
+tbl_bookings
+user_id -> foreign to tbl_users -> id
+tutor_id -> foreignt to tbl_tutor -> id
+subject_id -> foreign to tbl_subject -> id
+start_date
+start_time
+end_time
+status
+feedback
+rating
+
+tbl_chats
