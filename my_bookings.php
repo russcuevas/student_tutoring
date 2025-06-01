@@ -1,3 +1,26 @@
+<?php
+session_start();
+include 'connection/database.php';
+
+// Get user ID from session
+$user_id = $_SESSION['user_id']; // Ensure this is set during login
+
+// Fetch bookings for the logged-in user
+$stmt = $conn->prepare("
+    SELECT 
+        b.*,
+        s.subject_name,
+        CONCAT(t.first_name, ' ', t.last_name) AS tutor_name
+    FROM tbl_booking b
+    JOIN tbl_subject s ON b.subject_id = s.id
+    JOIN tbl_tutor t ON b.tutor_id = t.id
+    WHERE b.user_id = ?
+    ORDER BY b.date DESC
+");
+$stmt->execute([$user_id]);
+$bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -5,132 +28,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Bookings - Tutoring System</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-        }
-
-        .header {
-            background-color: #1a49cb;
-            color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .nav-menu a:hover,
-        .nav-menu a.active {
-            background-color: #1a49cb;
-            color: white;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-        }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: 250px 1fr;
-            gap: 20px;
-        }
-
-        .sidebar {
-            background-color: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .main-content {
-            background-color: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .nav-menu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .nav-menu li {
-            margin-bottom: 10px;
-        }
-
-        .nav-menu a {
-            display: block;
-            padding: 10px;
-            color: #333;
-            text-decoration: none;
-            border-radius: 4px;
-            transition: background-color 0.3s;
-        }
-
-        .nav-menu a:hover {
-            background-color: #1a49cb;
-            color: white;
-        }
-
-        .btn {
-            padding: 10px 15px;
-            background-color: #1a49cb;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn:hover {
-            background-color: #2980b9;
-        }
-
-        .logout-btn {
-            background-color: #e74c3c;
-        }
-
-        .logout-btn:hover {
-            background-color: #c0392b;
-        }
-
-        .section-title {
-            border-bottom: 2px solid #1a49cb;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-            color: #2c3e50;
-        }
-
-        .booking-card {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-        }
-
-        .status-pending {
-            color: #f39c12;
-        }
-
-        .status-confirmed {
-            color: #2ecc71;
-        }
-
-        .status-cancelled {
-            color: #e74c3c;
-        }
-
-        .status-completed {
-            color: #1a49cb;
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/my_bookings.css">
 </head>
 
 <body>
@@ -156,7 +54,38 @@
             <div class="main-content">
                 <h2 class="section-title">My Bookings</h2>
 
-                <p>You have no bookings yet. <a href="find_tutor.php">Find a tutor now</a>.</p>
+                <?php if (count($bookings) > 0): ?>
+                    <table class="table" style="width: 100%; border-collapse: collapse;">
+                        <thead>
+                            <tr>
+                                <th style="text-align:left;">Tutor</th>
+                                <th style="text-align:left;">Subject</th>
+                                <th style="text-align:left;">Date</th>
+                                <th style="text-align:left;">Time</th>
+                                <th style="text-align:left;">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($bookings as $booking): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($booking['tutor_name']) ?></td>
+                                    <td><?= htmlspecialchars($booking['subject_name']) ?></td>
+                                    <td><?= htmlspecialchars($booking['date']) ?></td>
+                                    <td><?= date('h:i A', strtotime($booking['start_time'])) ?> - <?= date('h:i A', strtotime($booking['end_time'])) ?></td>
+                                    <td><strong><?= ucfirst($booking['status']) ?></strong></td>
+                                    <td>
+                                        <?php if ($booking['status'] === 'approved'): ?>
+                                            <a href="chats.php?booking_id=<?= $booking['book_id'] ?>" class="btn btn-chat">Message tutor</a>
+                                        <?php endif; ?>
+                                    </td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <p>You have no bookings yet. <a href="find_tutor.php">Find a tutor now</a>.</p>
+                <?php endif; ?>
+
             </div>
         </div>
     </div>

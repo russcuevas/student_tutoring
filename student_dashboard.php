@@ -1,3 +1,29 @@
+<?php
+session_start();
+include 'connection/database.php';
+
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit();
+}
+
+// count approved students
+$stmt = $conn->prepare("SELECT COUNT(*) FROM tbl_users WHERE is_verified = 1");
+$stmt->execute();
+$approved_student_count = $stmt->fetchColumn();
+
+// count approved tutor
+$stmt = $conn->prepare("SELECT COUNT(*) FROM tbl_tutor WHERE is_verified = 1");
+$stmt->execute();
+$approved_tutor_count = $stmt->fetchColumn();
+
+// count pending tutor
+$stmt = $conn->prepare("SELECT COUNT(*) FROM tbl_tutor WHERE is_verified = 0");
+$stmt->execute();
+$pending_tutor_count = $stmt->fetchColumn();
+
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 

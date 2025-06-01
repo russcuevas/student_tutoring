@@ -1,3 +1,28 @@
+<?php
+session_start();
+include 'connection/database.php';
+
+// Fetch all subjects for dropdown
+$subjects = $conn->query("SELECT * FROM tbl_subject")->fetchAll(PDO::FETCH_ASSOC);
+
+// Initialize tutor results
+$tutorResults = [];
+
+if (isset($_GET['subject']) && $_GET['subject'] !== '') {
+    $subject_id = $_GET['subject'];
+
+    // Fetch available tutors for the selected subject
+    $stmt = $conn->prepare("
+    SELECT tas.*, CONCAT(t.first_name, ' ', t.last_name) AS tutor_name
+    FROM tbl_tutor_availability_subjects tas
+    JOIN tbl_tutor t ON tas.tutor_id = t.id
+    WHERE tas.subject_id = ?
+");
+    $stmt->execute([$subject_id]);
+    $tutorResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -5,226 +30,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Find a Tutor - Tutoring System</title>
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
-        }
-
-        .header {
-            background-color: #1a49cb;
-            color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .nav-menu a:hover,
-        .nav-menu a.active {
-            background-color: #1a49cb;
-            color: white;
-        }
-
-
-        .container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
-        }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: 250px 1fr;
-            gap: 20px;
-        }
-
-        .sidebar {
-            background-color: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .main-content {
-            background-color: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .nav-menu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .nav-menu li {
-            margin-bottom: 10px;
-        }
-
-        .nav-menu a {
-            display: block;
-            padding: 10px;
-            color: #333;
-            text-decoration: none;
-            border-radius: 4px;
-            transition: background-color 0.3s;
-        }
-
-        .nav-menu a:hover {
-            background-color: #1a49cb;
-            color: white;
-        }
-
-        .btn {
-            padding: 10px 15px;
-            background-color: #1a49cb;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-            transition: background-color 0.3s;
-        }
-
-        .btn:hover {
-            background-color: #2980b9;
-        }
-
-        .logout-btn {
-            background-color: #e74c3c;
-        }
-
-        .logout-btn:hover {
-            background-color: #c0392b;
-        }
-
-        .section-title {
-            border-bottom: 2px solid #1a49cb;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-            color: #2c3e50;
-        }
-
-        .tutor-card {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            background-color: white;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-
-        .tutor-info {
-            margin-bottom: 15px;
-        }
-
-        .subject-selector {
-            margin-bottom: 30px;
-            padding: 15px;
-            background-color: #f8f9fa;
-            border-radius: 8px;
-        }
-
-        select,
-        input {
-            padding: 10px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-            font-size: 16px;
-        }
-
-        .availability-container {
-            margin-top: 20px;
-        }
-
-        .availability-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-
-        .availability-table th,
-        .availability-table td {
-            border: 1px solid #ddd;
-            padding: 12px;
-            text-align: left;
-        }
-
-        .availability-table th {
-            background-color: #1a49cb;
-            color: white;
-        }
-
-        .availability-table tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-
-        .availability-table tr:hover {
-            background-color: #f1f1f1;
-        }
-
-        .tutor-details {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 15px;
-            align-items: center;
-        }
-
-        .tutor-main-info {
-            flex: 2;
-        }
-
-        .tutor-stats {
-            flex: 1;
-            text-align: right;
-        }
-
-        .rate {
-            font-size: 1.3em;
-            color: #27ae60;
-            font-weight: bold;
-        }
-
-        .experience {
-            color: #7f8c8d;
-            font-style: italic;
-        }
-
-        .no-tutors {
-            padding: 20px;
-            background-color: #f8d7da;
-            color: #721c24;
-            border-radius: 8px;
-            text-align: center;
-        }
-
-        .subject-name {
-            color: #1a49cb;
-            font-weight: bold;
-        }
-
-        .book-btn {
-            background-color: #2ecc71;
-            padding: 8px 15px;
-            font-size: 14px;
-        }
-
-        .book-btn:hover {
-            background-color: #27ae60;
-        }
-    </style>
+    <link rel="stylesheet" href="assets/css/find_tutor.css">
 </head>
 
 <body>
     <div class="header">
         <h1>Find a Tutor</h1>
         <div>
-            <span>Welcome, russelcvs</span>
+            <span>Welcome, <?= $_SESSION['username'] ?? 'Guest' ?></span>
             <a href="logout.php" class="btn logout-btn">Logout</a>
         </div>
     </div>
@@ -247,19 +60,54 @@
                     <label for="subject" style="font-weight: bold; margin-right: 10px;">Select Subject:</label>
                     <select name="subject" id="subject" required style="min-width: 200px;">
                         <option value="">-- Select a Subject --</option>
-                        <option value="6">
-                            PHP </option>
-                        <option value="7">
-                            HTML </option>
-                        <option value="8">
-                            CSS </option>
-                        <option value="9">
-                            JavaScript </option>
+                        <?php foreach ($subjects as $subject): ?>
+                            <option value="<?= $subject['id'] ?>" <?= isset($subject_id) && $subject_id == $subject['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($subject['subject_name']) ?>
+                            </option>
+                        <?php endforeach; ?>
                     </select>
                     <button type="submit" class="btn" style="margin-left: 10px;">Search</button>
                 </form>
 
-                <p style="text-align: center; color: #666;">Please select a subject to find available tutors.</p>
+                <?php if (isset($_GET['subject']) && $_GET['subject'] !== ''): ?>
+                    <h4 class="mt-4">Available Tutors:</h4>
+                    <?php if (count($tutorResults) > 0): ?>
+                        <table class="table mt-2" style="width: 100%;">
+                            <thead>
+                                <tr>
+                                    <th>Tutor Name</th>
+                                    <th>Date</th>
+                                    <th>Start Time</th>
+                                    <th>End Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($tutorResults as $row): ?>
+                                    <tr>
+                                        <td><?= htmlspecialchars($row['tutor_name']) ?></td>
+                                        <td><?= htmlspecialchars($row['available_date']) ?></td>
+                                        <td><?= date('h:i A', strtotime($row['start_time'])) ?></td>
+                                        <td><?= date('h:i A', strtotime($row['end_time'])) ?></td>
+                                        <td>
+                                            <form action="book_tutor.php" method="POST">
+                                                <input type="hidden" name="tutor_id" value="<?= $row['tutor_id'] ?>">
+                                                <input type="hidden" name="subject_id" value="<?= $row['subject_id'] ?>">
+                                                <input type="hidden" name="availability_id" value="<?= $row['id'] ?>">
+                                                <button type="submit" class="btn" style="background-color: green; color: white;">Enroll Now</button>
+                                            </form>
+
+                                        </td>
+                                    </tr>
+
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    <?php else: ?>
+                        <p style="color: red;">No available tutors found for this subject.</p>
+                    <?php endif; ?>
+                <?php else: ?>
+                    <p style="text-align: center; color: #666;">Please select a subject to find available tutors.</p>
+                <?php endif; ?>
             </div>
         </div>
     </div>
