@@ -2,25 +2,23 @@
 session_start();
 include 'connection/database.php';
 
-// Fetch all subjects for dropdown
 $subjects = $conn->query("SELECT * FROM tbl_subject")->fetchAll(PDO::FETCH_ASSOC);
 
-// Initialize tutor results
 $tutorResults = [];
 
 if (isset($_GET['subject']) && $_GET['subject'] !== '') {
     $subject_id = $_GET['subject'];
 
-    // Fetch available tutors for the selected subject
     $stmt = $conn->prepare("
-    SELECT tas.*, CONCAT(t.first_name, ' ', t.last_name) AS tutor_name
-    FROM tbl_tutor_availability_subjects tas
-    JOIN tbl_tutor t ON tas.tutor_id = t.id
-    WHERE tas.subject_id = ?
-");
+        SELECT tas.*, CONCAT(t.first_name, ' ', t.last_name) AS tutor_name
+        FROM tbl_tutor_availability_subjects tas
+        JOIN tbl_tutor t ON tas.tutor_id = t.id
+        WHERE tas.subject_id = ? AND t.is_verified = 1
+    ");
     $stmt->execute([$subject_id]);
     $tutorResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
 }
+
 ?>
 
 <!DOCTYPE html>
@@ -76,7 +74,7 @@ if (isset($_GET['subject']) && $_GET['subject'] !== '') {
                             <thead>
                                 <tr>
                                     <th>Tutor Name</th>
-                                    <th>Date</th>
+                                    <th>Session Date</th>
                                     <th>Start Time</th>
                                     <th>End Time</th>
                                 </tr>

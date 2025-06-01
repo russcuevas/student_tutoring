@@ -1,0 +1,42 @@
+body {
+    background-color: #1a49cb;
+}
+
+.rating {
+    font-size: 1.2em;
+    color: #f39c12;
+}
+
+.container {
+    max-width: 600px;
+    margin: 30px auto;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    font-family: Poppins, sans-serif;
+    color: white !important;
+}
+
+h2 {
+    margin-bottom: 20px;
+}
+
+.feedback-box {
+    background: #f9f9f9;
+    padding: 15px;
+    border-radius: 6px;
+    margin-top: 10px;
+    white-space: pre-wrap;
+    color: black;
+}
+
+.back-link {
+    margin-top: 20px;
+    display: inline-block;
+    color: white;
+    text-decoration: none;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}

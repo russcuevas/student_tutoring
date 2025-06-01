@@ -1,137 +1,68 @@
 <?php
 session_start();
-include 'connection/database.php';
+include 'connection/database.php'; // Must create $pdo
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
 
-// count approved students
-$stmt = $conn->prepare("SELECT COUNT(*) FROM tbl_users WHERE is_verified = 1");
-$stmt->execute();
-$approved_student_count = $stmt->fetchColumn();
+$user_id = $_SESSION['user_id'];
+$username = $_SESSION['username'] ?? 'User';
 
-// count approved tutor
-$stmt = $conn->prepare("SELECT COUNT(*) FROM tbl_tutor WHERE is_verified = 1");
-$stmt->execute();
-$approved_tutor_count = $stmt->fetchColumn();
+$current_date = date('Y-m-d');
+$current_time = date('H:i:s');
 
-// count pending tutor
-$stmt = $conn->prepare("SELECT COUNT(*) FROM tbl_tutor WHERE is_verified = 0");
-$stmt->execute();
-$pending_tutor_count = $stmt->fetchColumn();
+$sql = "SELECT b.*, t.first_name, t.last_name, s.subject_name
+        FROM tbl_booking b
+        JOIN tbl_tutor t ON b.tutor_id = t.id
+        JOIN tbl_subject s ON b.subject_id = s.id
+        WHERE b.user_id = :user_id
+          AND (b.date > :current_date OR (b.date = :current_date AND b.start_time > :current_time))
+          AND b.status = 'approved'
+        ORDER BY b.date, b.start_time";
 
+
+$stmt = $conn->prepare($sql);
+$stmt->execute([
+    ':user_id' => $user_id,
+    ':current_date' => $current_date,
+    ':current_time' => $current_time
+]);
+
+$upcoming_sessions = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Student Dashboard - Tutoring System</title>
+    <link rel="stylesheet" href="assets/css/student_dashboard.css" />
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 0;
-            background-color: #f5f5f5;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
         }
 
-        .header {
-            background-color: #1a49cb;
-            color: white;
-            padding: 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+        table,
+        th,
+        td {
+            border: 1px solid #ccc;
         }
 
-        .container {
-            max-width: 1200px;
-            margin: 20px auto;
-            padding: 20px;
+        th,
+        td {
+            padding: 8px 12px;
+            text-align: left;
         }
 
-        .welcome {
-            font-size: 1.5rem;
-            margin-bottom: 20px;
-        }
-
-        .dashboard {
-            display: grid;
-            grid-template-columns: 250px 1fr;
-            gap: 20px;
-        }
-
-        .sidebar {
-            background-color: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .main-content {
-            background-color: white;
-            border-radius: 8px;
-            padding: 20px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-
-        .nav-menu {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .nav-menu li {
-            margin-bottom: 10px;
-        }
-
-        .nav-menu a {
-            display: block;
-            padding: 10px;
-            color: #333;
-            text-decoration: none;
-            border-radius: 4px;
-            transition: background-color 0.3s;
-        }
-
-        .nav-menu a:hover,
-        .nav-menu a.active {
-            background-color: #1a49cb;
-            color: white;
-        }
-
-        .btn {
-            padding: 10px 15px;
-            background-color: #1a49cb;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-block;
-        }
-
-        .btn:hover {
-            background-color: #2980b9;
-        }
-
-        .logout-btn {
-            background-color: #e74c3c;
-        }
-
-        .logout-btn:hover {
-            background-color: #c0392b;
-        }
-
-        .section-title {
-            border-bottom: 2px solid #1a49cb;
-            padding-bottom: 10px;
-            margin-bottom: 20px;
-            color: #2c3e50;
+        .no-sessions {
+            margin-top: 15px;
+            font-style: italic;
         }
     </style>
 </head>
@@ -140,7 +71,7 @@ $pending_tutor_count = $stmt->fetchColumn();
     <div class="header">
         <h1>Student Dashboard</h1>
         <div>
-            <span>Welcome, russelcvs</span>
+            <span>Welcome, <?= htmlspecialchars($username) ?></span>
             <a href="logout.php" class="btn logout-btn">Logout</a>
         </div>
     </div>
@@ -158,10 +89,37 @@ $pending_tutor_count = $stmt->fetchColumn();
 
             <div class="main-content">
                 <h2 class="section-title">Upcoming Sessions</h2>
-                <p>You have no upcoming tutoring sessions. <a href="find_tutor.php">Find a tutor now</a>.</p>
 
-                <h2 class="section-title" style="margin-top: 30px;">Recent Activity</h2>
-                <p>No recent activity.</p>
+                <?php if (count($upcoming_sessions) > 0): ?>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Start Time</th>
+                                <th>End Time</th>
+                                <th>Tutor</th>
+                                <th>Subject</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($upcoming_sessions as $session): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($session['date']) ?></td>
+                                    <td><?= htmlspecialchars($session['start_time']) ?></td>
+                                    <td><?= htmlspecialchars($session['end_time']) ?></td>
+                                    <td><?= htmlspecialchars($session['first_name'] . ' ' . $session['last_name']) ?></td>
+                                    <td><?= htmlspecialchars($session['subject_name']) ?></td>
+                                    <td><?= htmlspecialchars($session['status']) ?></td>
+                                </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                <?php else: ?>
+                    <p class="no-sessions">
+                        You have no upcoming tutoring sessions. <a href="find_tutor.php">Find a tutor now</a>.
+                    </p>
+                <?php endif; ?>
             </div>
         </div>
     </div>

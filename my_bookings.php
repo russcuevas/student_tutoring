@@ -1,11 +1,7 @@
 <?php
 session_start();
 include 'connection/database.php';
-
-// Get user ID from session
-$user_id = $_SESSION['user_id']; // Ensure this is set during login
-
-// Fetch bookings for the logged-in user
+$user_id = $_SESSION['user_id'];
 $stmt = $conn->prepare("
     SELECT 
         b.*,
@@ -60,7 +56,7 @@ $bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
                             <tr>
                                 <th style="text-align:left;">Tutor</th>
                                 <th style="text-align:left;">Subject</th>
-                                <th style="text-align:left;">Date</th>
+                                <th style="text-align:left;">Start Date</th>
                                 <th style="text-align:left;">Time</th>
                                 <th style="text-align:left;">Status</th>
                             </tr>
@@ -76,8 +72,11 @@ $bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <td>
                                         <?php if ($booking['status'] === 'approved'): ?>
                                             <a href="chats.php?booking_id=<?= $booking['book_id'] ?>" class="btn btn-chat">Message tutor</a>
+                                        <?php elseif ($booking['status'] === 'end session'): ?>
+                                            <a href="rate_booking.php?booking_id=<?= $booking['book_id'] ?>" class="btn btn-rate">Add ratings/feedback</a>
                                         <?php endif; ?>
                                     </td>
+
                                 </tr>
                             <?php endforeach; ?>
                         </tbody>

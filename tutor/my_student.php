@@ -1,3 +1,54 @@
+<?php
+session_start();
+include '../connection/database.php';
+
+if (!isset($_SESSION['tutor_id'])) {
+    header('Location: ../index.php');
+    exit();
+}
+
+$tutor_id = $_SESSION['tutor_id'];
+
+
+
+if (isset($_POST['approve_student'])) {
+    $book_id = $_POST['book_id'];
+    $stmt = $conn->prepare("UPDATE tbl_booking SET status = 'approved' WHERE book_id = ?");
+    $stmt->execute([$book_id]);
+}
+
+if (isset($_POST['reject_student'])) {
+    $book_id = $_POST['book_id'];
+    $stmt = $conn->prepare("DELETE FROM tbl_booking WHERE book_id = ?");
+    $stmt->execute([$book_id]);
+}
+
+$stmt = $conn->prepare("
+    SELECT b.*, CONCAT(u.first_name, ' ', u.last_name) AS fullname, u.picture, s.subject_name 
+    FROM tbl_booking b
+    JOIN tbl_users u ON b.user_id = u.id
+    JOIN tbl_subject s ON b.subject_id = s.id
+    WHERE b.tutor_id = ?
+");
+
+
+$stmt->execute([$tutor_id]);
+$bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+if (isset($_POST['end_session'])) {
+    $book_id = $_POST['book_id'];
+    $stmt = $conn->prepare("UPDATE tbl_booking SET status = 'end session' WHERE book_id = ?");
+    $stmt->execute([$book_id]);
+}
+
+$stmtName = $conn->prepare("SELECT first_name, last_name FROM tbl_tutor WHERE id = ?");
+$stmtName->execute([$tutor_id]);
+$tutor = $stmtName->fetch(PDO::FETCH_ASSOC);
+$fullName = $tutor ? $tutor['first_name'] . ' ' . $tutor['last_name'] : 'Tutor';
+
+?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -7,257 +58,7 @@
     <title>Tutor Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        :root {
-            --primary-color: #1a49cb;
-            --primary-light: #4895ef;
-            --secondary-color: #3f37c9;
-            --accent-color: #f72585;
-            --light-color: #f8f9fa;
-            --dark-color: #212529;
-            --success-color: #4cc9f0;
-            --warning-color: #f8961e;
-            --error-color: #ef233c;
-            --gray-color: #adb5bd;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            font-family: 'Poppins', sans-serif;
-            background-color: #f5f7fa;
-            color: var(--dark-color);
-            line-height: 1.6;
-        }
-
-        .dashboard-container {
-            display: flex;
-            min-height: 100vh;
-        }
-
-        .sidebar {
-            width: 250px;
-            background: var(--primary-color);
-            color: white;
-            padding: 20px 0;
-            position: fixed;
-            height: 100%;
-            transition: all 0.3s;
-        }
-
-        .sidebar-header {
-            padding: 0 20px 20px;
-            text-align: center;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .sidebar-header h3 {
-            color: white;
-            margin-bottom: 5px;
-        }
-
-        .sidebar-header p {
-            color: var(--gray-color);
-            font-size: 14px;
-        }
-
-        .sidebar-menu {
-            padding: 20px 0;
-        }
-
-        .sidebar-menu h4 {
-            color: var(--gray-color);
-            font-size: 12px;
-            text-transform: uppercase;
-            padding: 0 20px;
-            margin-bottom: 15px;
-        }
-
-        .sidebar-menu ul {
-            list-style: none;
-        }
-
-        .sidebar-menu li {
-            margin-bottom: 5px;
-        }
-
-        .sidebar-menu a {
-            display: block;
-            padding: 10px 20px;
-            color: white;
-            text-decoration: none;
-            transition: all 0.3s;
-        }
-
-        .sidebar-menu a:hover,
-        .sidebar-menu a.active {
-            background: rgba(255, 255, 255, 0.1);
-            border-left: 3px solid var(--accent-color);
-        }
-
-        .sidebar-menu i {
-            margin-right: 10px;
-            width: 20px;
-            text-align: center;
-        }
-
-        .main-content {
-            flex: 1;
-            margin-left: 250px;
-            padding: 20px;
-        }
-
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 0;
-            margin-bottom: 20px;
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .header h2 {
-            color: var(--primary-color);
-        }
-
-        .user-info {
-            display: flex;
-            align-items: center;
-        }
-
-        .user-info img {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
-
-        .card {
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 10px;
-            border-bottom: 1px solid #eee;
-        }
-
-        .card-header h3 {
-            color: var(--primary-color);
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-
-        th,
-        td {
-            padding: 12px 15px;
-            text-align: left;
-            border-bottom: 1px solid #eee;
-        }
-
-        th {
-            background-color: #f8f9fa;
-            font-weight: 600;
-        }
-
-        tr:hover {
-            background-color: #f8f9fa;
-        }
-
-        .btn {
-            padding: 8px 15px;
-            border-radius: 5px;
-            border: none;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.3s;
-        }
-
-        .btn-primary {
-            background-color: var(--primary-color);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            background-color: var(--secondary-color);
-        }
-
-        .btn-success {
-            background-color: var(--success-color);
-            color: white;
-        }
-
-        .btn-danger {
-            background-color: var(--error-color);
-            color: white;
-        }
-
-        .badge {
-            display: inline-block;
-            padding: 3px 8px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .badge-success {
-            background-color: rgba(76, 201, 240, 0.1);
-            color: var(--success-color);
-        }
-
-        .badge-warning {
-            background-color: rgba(248, 150, 30, 0.1);
-            color: var(--warning-color);
-        }
-
-        .badge-primary {
-            background-color: rgba(67, 97, 238, 0.1);
-            color: var(--primary-color);
-        }
-
-        .tab-container {
-            margin-bottom: 20px;
-        }
-
-        .tabs {
-            display: flex;
-            border-bottom: 1px solid #eee;
-        }
-
-        .tab {
-            padding: 10px 20px;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-        }
-
-        .tab.active {
-            border-bottom: 2px solid var(--primary-color);
-            color: var(--primary-color);
-            font-weight: 500;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
-        }
-    </style>
+    <link rel="stylesheet" href="css/my_student.css">
 </head>
 
 <body>
@@ -274,8 +75,6 @@
                 <ul>
                     <li><a href="dashboard.php" data-tab="dashboard"><i class="fas fa-home"></i> Dashboard</a></li>
                     <li><a href="my_student.php" class="active" data-tab="users"><i class="fas fa-users"></i> My Student</a></li>
-                    <li><a href="pending_enrollees.php" data-tab="pending_students"><i class="fas fa-user-clock"></i> Pending Students</a></li>
-                    <li><a href="chats.php" data-tab="tutors"><i class="fas fa-message"></i> Chats</a></li>
 
                 </ul>
 
@@ -291,7 +90,7 @@
             <div class="header">
                 <h2>Tutor Dashboard</h2>
                 <div class="user-info">
-                    <span>Welcome, Izziah Bayani</span>
+                    <span>Welcome, <?= htmlspecialchars($fullName) ?></span>
                 </div>
             </div>
 
@@ -314,24 +113,41 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
-                            <td>32</td>
-                            <td>
-                                <img src="uploads/profile_pics/profile_6835352bc6ca0.jpg" width="50" height="50" style="border-radius: 50%;">
-                            </td>
-                            <td>Russel Vincent Cuevas</td>
-                            <td>PHP</td>
-                            <td>March 28 2025</td>
-                            <td>7:00AM</td>
-                            <td>5:00PM</td>
-                            <td>Approved</td>
-                            <td>
-                                <form method="post" style="display: inline;">
-                                    <input type="hidden" name="user_id" value="32">
-                                    <button type="submit" name="reject_student" class="btn btn-danger">Delete</button>
-                                </form>
-                            </td>
-                        </tr>
+                        <?php foreach ($bookings as $booking): ?>
+                            <tr>
+                                <td><?= $booking['book_id'] ?></td>
+                                <td>
+                                    <img src="../uploads/student_validation/<?= $booking['picture'] ?>" width="50" height="50" style="border-radius: 50%;">
+                                </td>
+                                <td><?= htmlspecialchars($booking['fullname']) ?></td>
+                                <td><?= htmlspecialchars($booking['subject_name']) ?></td>
+                                <td><?= htmlspecialchars($booking['date']) ?></td>
+                                <td><?= htmlspecialchars($booking['start_time']) ?></td>
+                                <td><?= htmlspecialchars($booking['end_time']) ?></td>
+                                <td><?= ucfirst($booking['status']) ?></td>
+                                <td>
+                                    <?php if ($booking['status'] === 'pending'): ?>
+                                        <form method="post" style="display:inline;">
+                                            <input type="hidden" name="book_id" value="<?= $booking['book_id'] ?>">
+                                            <button type="submit" name="approve_student" class="btn btn-success">Approve</button>
+                                        </form>
+                                        <form method="post" style="display:inline;">
+                                            <input type="hidden" name="book_id" value="<?= $booking['book_id'] ?>">
+                                            <button type="submit" name="reject_student" class="btn btn-danger">Reject</button>
+                                        </form>
+                                    <?php elseif ($booking['status'] === 'approved'): ?>
+                                        <a href="chats.php?booking_id=<?= $booking['book_id'] ?>" class="btn btn-primary">Chat</a>
+                                        <form method="post" style="display:inline;">
+                                            <input type="hidden" name="book_id" value="<?= $booking['book_id'] ?>">
+                                            <button type="submit" name="end_session" class="btn btn-danger">End tutor</button>
+                                        </form>
+
+                                    <?php else: ?>
+                                        <a href="view_ratings.php?booking_id=<?= $booking['book_id'] ?>" class="btn btn-primary">View Ratings</a>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
                     </tbody>
                 </table>
             </div>
