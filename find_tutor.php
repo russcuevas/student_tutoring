@@ -1,6 +1,18 @@
 <?php
 session_start();
 include 'connection/database.php';
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit();
+}
+
+$user_id = $_SESSION['user_id'];
+$user_stmt = $conn->prepare("SELECT first_name, last_name FROM tbl_users WHERE id = ?");
+$user_stmt->execute([$user_id]);
+$user = $user_stmt->fetch(PDO::FETCH_ASSOC);
+
+$first_name = $user['first_name'];
+$full_name = $user['first_name'] . ' ' . $user['last_name'];
 
 $subjects = $conn->query("SELECT * FROM tbl_subject")->fetchAll(PDO::FETCH_ASSOC);
 
@@ -35,7 +47,7 @@ if (isset($_GET['subject']) && $_GET['subject'] !== '') {
     <div class="header">
         <h1>Find a Tutor</h1>
         <div>
-            <span>Welcome, <?= $_SESSION['username'] ?? 'Guest' ?></span>
+            <span>Welcome, <?php echo htmlspecialchars($full_name); ?></span>
             <a href="logout.php" class="btn logout-btn">Logout</a>
         </div>
     </div>

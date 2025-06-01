@@ -2,14 +2,19 @@
 session_start();
 include 'connection/database.php';
 
-$user_id = $_SESSION['user_id'] ?? null;
-
-if (!$user_id) {
+if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
-    exit;
+    exit();
 }
 
-// Get user details
+$user_id = $_SESSION['user_id'];
+$user_stmt = $conn->prepare("SELECT first_name, last_name FROM tbl_users WHERE id = ?");
+$user_stmt->execute([$user_id]);
+$user = $user_stmt->fetch(PDO::FETCH_ASSOC);
+
+$first_name = $user['first_name'];
+$full_name = $user['first_name'] . ' ' . $user['last_name'];
+
 $stmt = $conn->prepare("SELECT * FROM tbl_users WHERE id = ?");
 $stmt->execute([$user_id]);
 $user = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -18,9 +23,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $first_name = $_POST['first_name'] ?? '';
     $last_name = $_POST['last_name'] ?? '';
     $email = $_POST['email'] ?? '';
-    $picture_name = $user['picture']; // Default to current picture
+    $picture_name = $user['picture'];
 
-    // Handle profile picture update
     if (!empty($_FILES['profile_pic']['name'])) {
         $target_dir = "uploads/student_validation/";
         $new_picture_name = time() . "_" . basename($_FILES["profile_pic"]["name"]);
@@ -31,11 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Update user info
     $stmt = $conn->prepare("UPDATE tbl_users SET first_name = ?, last_name = ?, email = ?, picture = ? WHERE id = ?");
     $stmt->execute([$first_name, $last_name, $email, $picture_name, $user_id]);
-
-    // Redirect to refresh data
     header("Location: my_profile.php?updated=1");
     exit;
 }
@@ -54,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <div class="header">
         <h1>My Profile</h1>
         <div>
-            <span>Welcome, <?= htmlspecialchars($user['username']) ?></span>
+            <span>Welcome, <?php echo htmlspecialchars($full_name); ?></span>
             <a href="logout.php" class="btn logout-btn">Logout</a>
         </div>
     </div>

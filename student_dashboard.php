@@ -1,11 +1,20 @@
 <?php
 session_start();
-include 'connection/database.php'; // Must create $pdo
+include 'connection/database.php';
 
 if (!isset($_SESSION['user_id'])) {
     header('Location: login.php');
     exit();
 }
+
+$user_id = $_SESSION['user_id'];
+
+$user_stmt = $conn->prepare("SELECT first_name, last_name FROM tbl_users WHERE id = ?");
+$user_stmt->execute([$user_id]);
+$user = $user_stmt->fetch(PDO::FETCH_ASSOC);
+
+$first_name = $user['first_name'];
+$full_name = $user['first_name'] . ' ' . $user['last_name'];
 
 $user_id = $_SESSION['user_id'];
 $username = $_SESSION['username'] ?? 'User';
@@ -71,7 +80,7 @@ $upcoming_sessions = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="header">
         <h1>Student Dashboard</h1>
         <div>
-            <span>Welcome, <?= htmlspecialchars($username) ?></span>
+            <span>Welcome, <?php echo htmlspecialchars($full_name); ?></span>
             <a href="logout.php" class="btn logout-btn">Logout</a>
         </div>
     </div>

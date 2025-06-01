@@ -15,12 +15,16 @@ if (isset($_POST['approve_student'])) {
     $book_id = $_POST['book_id'];
     $stmt = $conn->prepare("UPDATE tbl_booking SET status = 'approved' WHERE book_id = ?");
     $stmt->execute([$book_id]);
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit();
 }
 
 if (isset($_POST['reject_student'])) {
     $book_id = $_POST['book_id'];
     $stmt = $conn->prepare("DELETE FROM tbl_booking WHERE book_id = ?");
     $stmt->execute([$book_id]);
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit();
 }
 
 $stmt = $conn->prepare("
@@ -39,6 +43,8 @@ if (isset($_POST['end_session'])) {
     $book_id = $_POST['book_id'];
     $stmt = $conn->prepare("UPDATE tbl_booking SET status = 'end session' WHERE book_id = ?");
     $stmt->execute([$book_id]);
+    header("Location: " . $_SERVER['PHP_SELF']);
+    exit();
 }
 
 $stmtName = $conn->prepare("SELECT first_name, last_name FROM tbl_tutor WHERE id = ?");
@@ -139,7 +145,7 @@ $fullName = $tutor ? $tutor['first_name'] . ' ' . $tutor['last_name'] : 'Tutor';
                                         <a href="chats.php?booking_id=<?= $booking['book_id'] ?>" class="btn btn-primary">Chat</a>
                                         <form method="post" style="display:inline;">
                                             <input type="hidden" name="book_id" value="<?= $booking['book_id'] ?>">
-                                            <button type="submit" name="end_session" class="btn btn-danger">End tutor</button>
+                                            <button style="height: 39px;" type="submit" name="end_session" class="btn btn-danger">End tutor</button>
                                         </form>
 
                                     <?php else: ?>

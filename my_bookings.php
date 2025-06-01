@@ -1,7 +1,21 @@
 <?php
 session_start();
 include 'connection/database.php';
+
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit();
+}
+
 $user_id = $_SESSION['user_id'];
+
+$user_stmt = $conn->prepare("SELECT first_name, last_name FROM tbl_users WHERE id = ?");
+$user_stmt->execute([$user_id]);
+$user = $user_stmt->fetch(PDO::FETCH_ASSOC);
+
+$first_name = $user['first_name'];
+$full_name = $user['first_name'] . ' ' . $user['last_name'];
+
 $stmt = $conn->prepare("
     SELECT 
         b.*,
@@ -17,6 +31,7 @@ $stmt->execute([$user_id]);
 $bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -31,7 +46,7 @@ $bookings = $stmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="header">
         <h1>My Bookings</h1>
         <div>
-            <span>Welcome, russelcvs</span>
+            <span>Welcome, <?php echo htmlspecialchars($full_name); ?></span>
             <a href="logout.php" class="btn logout-btn">Logout</a>
         </div>
     </div>
