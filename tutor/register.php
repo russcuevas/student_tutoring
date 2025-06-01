@@ -1,3 +1,76 @@
+<?php
+include '../connection/database.php';
+
+$subjects = $conn->query("SELECT id, subject_name FROM tbl_subject")->fetchAll(PDO::FETCH_ASSOC);
+
+if (isset($_POST['username'])) {
+    $username         = $_POST['username'];
+    $email            = $_POST['email'];
+    $first_name       = $_POST['first_name'];
+    $last_name        = $_POST['last_name'];
+    $bio              = $_POST['bio'];
+    $qualifications   = $_POST['qualifications'];
+    $password         = $_POST['password'];
+    $confirm_password = $_POST['confirm_password'];
+    $picture          = $_FILES['picture'];
+
+    $available_date = $_POST['available_date'];
+    $start_time     = $_POST['start_time'];
+    $end_time       = $_POST['end_time'];
+    $subjects       = $_POST['subjects'];
+
+    if ($password !== $confirm_password) {
+        echo "<script>alert('Passwords do not match.');</script>";
+    } elseif (strlen($password) < 6) {
+        echo "<script>alert('Password must be at least 6 characters long.');</script>";
+    } else {
+        $hashed_password = md5($password);
+
+        $upload_dir = "../uploads/tutor_validation/";
+        $picture_name = time() . "_" . basename($picture["name"]);
+        $target_file = $upload_dir . $picture_name;
+
+        if (move_uploaded_file($picture["tmp_name"], $target_file)) {
+            $sql = "INSERT INTO tbl_tutor (username, password, email, first_name, last_name, bio, qualifications, created_at, picture, is_verified)
+                    VALUES (:username, :password, :email, :first_name, :last_name, :bio, :qualifications, NOW(), :picture, 0)";
+
+            $stmt = $conn->prepare($sql);
+            $stmt->execute([
+                ':username'       => $username,
+                ':password'       => $hashed_password,
+                ':email'          => $email,
+                ':first_name'     => $first_name,
+                ':last_name'      => $last_name,
+                ':bio'            => $bio,
+                ':qualifications' => $qualifications,
+                ':picture'        => $picture_name
+            ]);
+
+            $tutor_id = $conn->lastInsertId();
+
+            $sql_avail = "INSERT INTO tbl_tutor_availability_subjects (available_date, tutor_id, subject_id, start_time, end_time)
+                          VALUES (:available_date, :tutor_id, :subject_id, :start_time, :end_time)";
+            $stmt_avail = $conn->prepare($sql_avail);
+
+            foreach ($subjects as $subject_id) {
+                $stmt_avail->execute([
+                    ':available_date' => $available_date,
+                    ':tutor_id'       => $tutor_id,
+                    ':subject_id'     => $subject_id,
+                    ':start_time'     => $start_time,
+                    ':end_time'       => $end_time
+                ]);
+            }
+
+            echo "<script>alert('Registration successful!'); window.location.href='login.php';</script>";
+        } else {
+            echo "<script>alert('Failed to upload picture.');</script>";
+        }
+    }
+}
+?>
+
+
 <!DOCTYPE html>
 <html lang="en">
 
@@ -261,106 +334,94 @@
             </div>
 
 
-            <form action="/student-tutoring/tutor_register.php" method="post">
 
-                <form action="/student-tutoring/tutor_register.php" method="post" enctype="multipart/form-data">
-                    <!-- Existing form fields -->
+            <form action="" method="post" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="picture">ID Picture (Required for verification)</label>
+                    <input type="file" id="picture" name="picture" class="form-control" accept="image/*" required>
+                    <div class="form-note">Upload a clear photo of your government-issued ID for verification</div>
+                </div>
 
+                <div class="form-group">
+                    <label for="available_date">Available Date</label>
+                    <input type="date" id="available_date" name="available_date" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="start_time">Start Time</label>
+                    <input type="time" id="start_time" name="start_time" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="end_time">End Time</label>
+                    <input type="time" id="end_time" name="end_time" class="form-control" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="username">Username</label>
+                    <input type="text" id="username" name="username" class="form-control" value="" placeholder="Choose a username">
+                </div>
+
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" class="form-control" value="" placeholder="Your email address">
+                </div>
+
+                <div class="name-fields">
                     <div class="form-group">
-                        <label for="profile_pic">ID Picture (Required for verification)</label>
-                        <input type="file" id="profile_pic" name="profile_pic" class="form-control" accept="image/*" required>
-                        <div class="form-note">Upload a clear photo of your government-issued ID for verification</div>
+                        <label for="first_name">First Name</label>
+                        <input type="text" id="first_name" name="first_name" class="form-control" value="" placeholder="First name" required>
                     </div>
-
                     <div class="form-group">
-                        <label for="available_date">Available Date</label>
-                        <input type="date" id="available_date" name="available_date" class="form-control" required>
+                        <label for="last_name">Last Name</label>
+                        <input type="text" id="last_name" name="last_name" class="form-control" value="" placeholder="Last name" required>
                     </div>
+                </div>
 
-                    <div class="form-group">
-                        <label for="start_time">Start Time</label>
-                        <input type="time" id="start_time" name="start_time" class="form-control" required>
-                    </div>
+                <div class="form-group">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" name="password" class="form-control" placeholder="Create a password">
+                    <div class="form-note">Minimum 6 characters</div>
+                </div>
 
-                    <div class="form-group">
-                        <label for="end_time">End Time</label>
-                        <input type="time" id="end_time" name="end_time" class="form-control" required>
-                    </div>
+                <div class="form-group">
+                    <label for="confirm_password">Confirm Password</label>
+                    <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Repeat your password">
+                </div>
 
-                    <div class="form-group">
-                        <label for="username">Username</label>
-                        <input type="text" id="username" name="username" class="form-control" value="" placeholder="Choose a username">
-                    </div>
-
-                    <div class="form-group">
-                        <label for="email">Email Address</label>
-                        <input type="email" id="email" name="email" class="form-control" value="" placeholder="Your email address">
-                    </div>
-
-                    <div class="name-fields">
-                        <div class="form-group">
-                            <label for="first_name">First Name</label>
-                            <input type="text" id="first_name" name="first_name" class="form-control" value="" placeholder="First name" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="last_name">Last Name</label>
-                            <input type="text" id="last_name" name="last_name" class="form-control" value="" placeholder="Last name" required>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="password">Password</label>
-                        <input type="password" id="password" name="password" class="form-control" placeholder="Create a password">
-                        <div class="form-note">Minimum 6 characters</div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="confirm_password">Confirm Password</label>
-                        <input type="password" id="confirm_password" name="confirm_password" class="form-control" placeholder="Repeat your password">
-                    </div>
-
-                    <div class="form-group">
-                        <label>Subjects You Can Teach</label>
-                        <div class="subject-options">
+                <div class="form-group">
+                    <label>Subjects You Can Teach</label>
+                    <div class="subject-options">
+                        <?php foreach ($subjects as $subject): ?>
                             <div class="subject-option">
-                                <input type="checkbox" id="subject_php" name="subjects[]" value="PHP">
-                                <label for="subject_php">PHP</label>
+                                <input type="checkbox" id="subject_<?= $subject['id'] ?>" name="subjects[]" value="<?= $subject['id'] ?>">
+                                <label for="subject_<?= $subject['id'] ?>"><?= htmlspecialchars($subject['subject_name']) ?></label>
                             </div>
-                            <div class="subject-option">
-                                <input type="checkbox" id="subject_html" name="subjects[]" value="HTML">
-                                <label for="subject_html">HTML</label>
-                            </div>
-                            <div class="subject-option">
-                                <input type="checkbox" id="subject_css" name="subjects[]" value="CSS">
-                                <label for="subject_css">CSS</label>
-                            </div>
-                            <div class="subject-option">
-                                <input type="checkbox" id="subject_javascript" name="subjects[]" value="JavaScript">
-                                <label for="subject_javascript">JavaScript</label>
-                            </div>
-                        </div>
+                        <?php endforeach; ?>
                     </div>
+                </div>
 
-                    <div class="form-group">
-                        <label for="qualifications">Qualifications</label>
-                        <textarea id="qualifications" name="qualifications" class="form-control" placeholder="List your degrees, certifications, and relevant experience"></textarea>
-                        <div class="form-note">Please be detailed about your teaching experience and qualifications</div>
-                    </div>
 
-                    <div class="form-group">
-                        <label for="bio">About You</label>
-                        <textarea id="bio" name="bio" class="form-control" placeholder="Tell us about your teaching philosophy and approach"></textarea>
-                        <div class="form-note">This helps students understand your teaching style</div>
-                    </div>
+                <div class="form-group">
+                    <label for="qualifications">Qualifications</label>
+                    <textarea id="qualifications" name="qualifications" class="form-control" placeholder="List your degrees, certifications, and relevant experience"></textarea>
+                    <div class="form-note">Please be detailed about your teaching experience and qualifications</div>
+                </div>
 
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-user-plus"></i> Submit Application
-                    </button>
+                <div class="form-group">
+                    <label for="bio">About You</label>
+                    <textarea id="bio" name="bio" class="form-control" placeholder="Tell us about your teaching philosophy and approach"></textarea>
+                    <div class="form-note">This helps students understand your teaching style</div>
+                </div>
 
-                    <div class="login-link">
-                        Already have an account? <a href="login.php">Sign in here</a>
-                    </div>
-                </form>
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i> Submit Application
+                </button>
+
+                <div class="login-link">
+                    Already have an account? <a href="login.php">Sign in here</a>
+                </div>
+            </form>
         </div>
     </div>
 </body>

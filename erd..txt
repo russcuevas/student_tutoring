@@ -27,6 +27,7 @@ subject_name
 
 tbl_tutor_availability_subjects
 available_date
+tutor_id -> foreign to tbl_tutor -> id
 subject_id -> foreign to tbl_subject -> id
 start_time
 end_time
@@ -44,3 +45,4 @@ feedback
 rating
 
 tbl_chats
+subject_id 
