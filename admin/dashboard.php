@@ -66,7 +66,7 @@ $pending_tutor_count = $stmt->fetchColumn();
             <div class="header">
                 <h2>Admin Dashboard</h2>
                 <div class="user-info">
-                    <span>Welcome, Izziah Bayani</span>
+                    <span>Welcome, <?php echo htmlspecialchars($_SESSION['fullname']); ?></span>
                 </div>
             </div>
 

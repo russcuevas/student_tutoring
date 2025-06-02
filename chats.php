@@ -2,7 +2,13 @@
 session_start();
 include 'connection/database.php';
 
-$user_id = $_SESSION['user_id']; // either student or tutor
+if (!isset($_SESSION['user_id'])) {
+    header('Location: login.php');
+    exit();
+}
+
+
+$user_id = $_SESSION['user_id'];
 
 $booking_id = $_GET['booking_id'] ?? null;
 
@@ -10,7 +16,6 @@ if (!$booking_id) {
     die("Booking ID is required.");
 }
 
-// Check if booking is approved and user is part of it
 $stmt = $conn->prepare("
     SELECT * FROM tbl_booking 
     WHERE book_id = ? AND status = 'approved' AND (user_id = ? OR tutor_id = ?)

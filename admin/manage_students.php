@@ -1,5 +1,11 @@
 <?php
+session_start();
 include '../connection/database.php';
+
+if (!isset($_SESSION['admin_id'])) {
+    header('Location: login.php');
+    exit();
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $userId = $_POST['user_id'] ?? null;
@@ -81,7 +87,7 @@ $pending_tutor_count = $stmt->fetchColumn();
             <div class="header">
                 <h2>Admin Dashboard</h2>
                 <div class="user-info">
-                    <span>Welcome, Izziah Bayani</span>
+                    <span>Welcome, <?php echo htmlspecialchars($_SESSION['fullname']); ?></span>
                 </div>
             </div>
 

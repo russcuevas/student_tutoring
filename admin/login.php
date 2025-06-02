@@ -17,6 +17,7 @@ if (isset($_POST['login'])) {
         $user = $select_admin->fetch(PDO::FETCH_ASSOC);
         $_SESSION['admin_id'] = $user['id'];
         $_SESSION['username'] = $user['username'];
+        $_SESSION['fullname'] = $user['fullname'];
         header('location: dashboard.php');
     } else {
         $_SESSION['error_message'] = 'Incorrect username or password';
